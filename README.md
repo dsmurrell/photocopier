@@ -44,6 +44,12 @@ python photocopier.py /path/to/source /path/to/destination -s
 
 > 💡 **Note**: The `copied_hashes.txt` file is essential and should not be deleted. It resides in the destination directory and serves as a record of what's already been copied. Deleting this file would lose that record and may result in duplicates.
 
+## 🖥️ Output
+
+Whenever a hash exists, a dot (.) is printed to show that this file has been found in your library already. When a file is not found and copied across, a plus (+) is printed. The output can look something like this:
+
+<img width="1507" alt="Screenshot 2023-08-06 at 22 17 29" src="https://github.com/dsmurrell/photocopier/assets/4035854/f48e991b-8883-4219-891b-6df9ec323d61">
+
 ## 🤝 Contributing
 
 If you find any issues or have suggestions, feel free to open an issue or make a pull request.
