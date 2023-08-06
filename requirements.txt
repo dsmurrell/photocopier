@@ -1,1 +1,2 @@
 pyexifinfo==0.4.0  # requires brew install exiftool
+click==8.1.6
