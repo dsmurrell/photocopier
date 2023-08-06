@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.black]
+line-length = 120
+extend-exclude = '''
+/(
+  | venv
+  | /.*
+)/
+'''
+
+[tool.isort]
+profile = "black"
+skip = "venv"
+known_third_party = "alembic"
+
+[tool.mypy]
+plugins = "pydantic.mypy"
