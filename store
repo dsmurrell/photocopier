@@ -8,5 +8,5 @@ fi
 
 SOURCE_DIR=$1
 
-# Run the command
-caffeinate -i screen -S photocopy -L -Logfile copy_log.txt python photocopier.py "$SOURCE_DIR" /Volumes/6TB2/photocopied
+# Run the copy inside a detached screen session, keeping the Mac awake
+caffeinate -i screen -S photocopy -L -Logfile copy_log.txt photocopier copy "$SOURCE_DIR" /Volumes/6TB2/photocopied
