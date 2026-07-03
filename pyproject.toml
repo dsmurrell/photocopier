@@ -27,6 +27,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/dsmurrell/photocopier"
 Repository = "https://github.com/dsmurrell/photocopier"
+# Documentation = "https://photocopier.dev"  # uncomment when the docs site is live
 
 [project.scripts]
 photocopier = "photocopier.cli:main"
@@ -35,7 +36,11 @@ photocopier = "photocopier.cli:main"
 path = "photocopier/__init__.py"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.4"]
+dev = ["pytest>=7.0", "ruff>=0.4", "build>=1.0", "twine>=5.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
 
 [tool.ruff]
 line-length = 120
