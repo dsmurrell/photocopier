@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Ensure a source directory is provided
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 source_directory"
+    exit 1
+fi
+
+SOURCE_DIR=$1
+
+# Run the command
+caffeinate -i screen -S photocopy -L -Logfile copy_log.txt python photocopier.py "$SOURCE_DIR" /Volumes/6TB2/photocopied

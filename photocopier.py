@@ -2,6 +2,8 @@
 # Copy: python photocopier.py /Users/getafix/Pictures /Volumes/6TB2/photocopied
 # Stock take: python photocopier.py /Users/getafix/Pictures /Volumes/6TB2/photocopied -s
 
+# caffeinate -i screen -S photocopy -L -Logfile copy_log.txt python photocopier.py /Volumes/6TB2/1TB_small/photos /Volumes/6TB2/photocopied -s
+
 import hashlib
 import logging
 import os
@@ -24,6 +26,18 @@ allowed_extensions_lower = {
     ".cr2",
     ".mp4",
     ".mov",
+    ".m4v",
+    ".mkv",
+    ".avi",
+    ".mpg",
+    ".mpeg",
+    ".3gp",
+    ".3g2",
+    ".mts",
+    ".m2ts",
+    ".vob",
+    ".flv",
+    ".wmv",
 }
 
 
@@ -150,6 +164,7 @@ def main(src_dir, dest_dir, stock_take):
 
     hashes_file = os.path.join(dest_dir, "copied_hashes.txt")
     organize_by_date(src_dir, dest_dir, hashes_file)
+    logger.info("Done")
 
 
 if __name__ == "__main__":
