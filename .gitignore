@@ -1,3 +1,12 @@
 /old
 /.vscode
 /venv
+notes.diff
+/logs/
+copy_log*.txt
+/photocopier-docs/
+__pycache__/
+*.egg-info/
+dist/
+.pytest_cache/
+.coverage
