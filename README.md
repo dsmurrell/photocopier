@@ -106,6 +106,15 @@ python -m venv .venv && ./.venv/bin/pip install -e ".[dev]"
 ./.venv/bin/pytest
 ```
 
+## Disclaimer
+
+Photocopier is free, open-source software provided **as is, without warranty of any
+kind** (see [LICENSE](LICENSE)). It is designed so you never have to take it on
+trust — every copy is verified byte-for-byte, and the `verify` command lets you
+prove a backup is complete before deleting anything. Please follow the golden
+rules anyway: keep **two** backup copies on separate drives, and only delete
+originals after `photocopier verify` reports ✓.
+
 ## License
 
 MIT
