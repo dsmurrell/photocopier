@@ -19,7 +19,7 @@ from photocopier.core import (
     verify_files,
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -34,13 +34,16 @@ def main():
 @click.argument("src_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("dest_dir", type=click.Path(file_okay=False))
 @click.option("--dry-run", is_flag=True, help="Show what would be copied without copying anything.")
-def copy(src_dir, dest_dir, dry_run):
+@click.option("-v", "--verbose", is_flag=True, help="Log each file as it is handled.")
+def copy(src_dir, dest_dir, dry_run, verbose):
     """Copy media from SRC_DIR into DEST_DIR, organised by date.
 
     Every file is verified after copying (the destination bytes are re-hashed
     and compared to the source) before it is recorded as done. Duplicates —
     files whose content was copied before — are skipped.
     """
+    if verbose:
+        logging.getLogger().setLevel(logging.INFO)
     if not dry_run:
         os.makedirs(dest_dir, exist_ok=True)
         removed = sweep_partial_files(dest_dir)
