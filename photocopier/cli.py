@@ -58,7 +58,7 @@ def copy(src_dir, dest_dir, dry_run):
     stats = CopyStats()
 
     def process_all(hashes_f):
-        with click.progressbar(media_files, label="Copying", show_pos=True) as bar:
+        with click.progressbar(media_files, label="Checking" if dry_run else "Copying", show_pos=True) as bar:
             for src_file_path in bar:
                 copy_one(src_file_path, dest_dir, seen_hashes, hashes_f, stats, dry_run=dry_run)
 
