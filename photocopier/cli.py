@@ -60,8 +60,18 @@ def copy(src_dir, dest_dir, dry_run, verbose):
 
     stats = CopyStats()
 
+    def counts(_item):
+        done = stats.would_copy if dry_run else stats.copied
+        text = f"{'new' if dry_run else 'copied'} {done}  dup {stats.duplicates}"
+        return text + (f"  err {stats.errors}" if stats.errors else "")
+
     def process_all(hashes_f):
-        with click.progressbar(media_files, label="Checking" if dry_run else "Copying", show_pos=True) as bar:
+        with click.progressbar(
+            media_files,
+            label="Checking" if dry_run else "Copying",
+            show_pos=True,
+            item_show_func=counts,
+        ) as bar:
             for src_file_path in bar:
                 copy_one(src_file_path, dest_dir, seen_hashes, hashes_f, stats, dry_run=dry_run)
 
