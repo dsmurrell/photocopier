@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "photocopier"
+name = "photocopier-cli"
 dynamic = ["version"]
 description = "Back up photos and videos to external drives — organised by date, de-duplicated, and verified."
 readme = "README.md"
@@ -33,6 +33,10 @@ photocopier = "photocopier.cli:main"
 
 [tool.hatch.version]
 path = "photocopier/__init__.py"
+
+# The package is named photocopier-cli, but the code folder is photocopier
+[tool.hatch.build.targets.wheel]
+packages = ["photocopier"]
 
 # Source package: just the code, tests and docs (not plans or personal scripts)
 [tool.hatch.build.targets.sdist]

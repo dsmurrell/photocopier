@@ -23,7 +23,7 @@ Requires Python 3.10+ and [exiftool](https://exiftool.org) (for photo dates):
 
 ```bash
 brew install exiftool pipx     # macOS
-pipx install photocopier
+pipx install photocopier-cli   # the command is still `photocopier`
 ```
 
 ## Usage
