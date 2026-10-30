@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -141,14 +142,14 @@ class TestSafeCopy:
         dest = str(tmp_path / "dest" / "a.jpg")
         os.makedirs(os.path.dirname(dest))
         safe_copy(src, dest, hash_file(src))
-        assert open(dest, "rb").read() == b"payload"
+        assert Path(dest).read_bytes() == b"payload"
         assert not os.path.exists(dest + ".part")
 
     def test_bad_hash_leaves_nothing(self, tmp_path):
         src = make_file(str(tmp_path / "src" / "a.jpg"), b"payload")
         dest = str(tmp_path / "dest" / "a.jpg")
         os.makedirs(os.path.dirname(dest))
-        with pytest.raises(IOError):
+        with pytest.raises(OSError):
             safe_copy(src, dest, "not-the-right-hash")
         assert not os.path.exists(dest)
         assert not os.path.exists(dest + ".part")

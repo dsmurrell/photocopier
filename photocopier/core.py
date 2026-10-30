@@ -6,6 +6,7 @@ MD5 is fine for de-duplication (we are not defending against adversaries).
 """
 
 import atexit
+import contextlib
 import hashlib
 import json
 import logging
@@ -84,7 +85,7 @@ def hash_file(file_path):
             while chunk := f.read(CHUNK_SIZE):
                 digest.update(chunk)
         return digest.hexdigest()
-    except Exception as e:
+    except OSError as e:
         logger.error(f"Error hashing {file_path}: {e}")
         return None
 
@@ -163,7 +164,7 @@ class ExifTool:
         except FileNotFoundError:
             self.unavailable = True
             logger.warning("exiftool not found: using file modified times for dates.")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - any exiftool trouble: restart it and fall back to mtime
             logger.warning(f"exiftool problem on {file_path} ({e!r}); restarting it.")
             self.close()
         return None
@@ -177,7 +178,7 @@ class ExifTool:
             proc.stdin.flush()
             proc.stdin.close()
             proc.wait(timeout=5)
-        except Exception:
+        except Exception:  # noqa: BLE001 - polite shutdown failed for any reason: force it
             proc.kill()
             proc.wait()
 
@@ -241,7 +242,7 @@ def sweep_partial_files(dest_dir):
                     os.remove(path)
                     removed.append(path)
                     logger.info(f"Removed partial file from interrupted run: {path}")
-                except Exception as e:
+                except OSError as e:
                     logger.error(f"Could not remove partial file {path}: {e}")
     return removed
 
@@ -266,15 +267,13 @@ def safe_copy(src_file_path, dest_file_path, expected_hash):
         shutil.copy2(src_file_path, part_path)
         dest_hash = hash_file(part_path)
         if dest_hash != expected_hash:
-            raise IOError(f"Verification failed after copy (source {expected_hash}, destination {dest_hash})")
+            raise OSError(f"Verification failed after copy (source {expected_hash}, destination {dest_hash})")
         os.rename(part_path, dest_file_path)
     except BaseException:
         # Clean up the in-flight file on error or Ctrl-C, then re-raise
-        try:
+        with contextlib.suppress(OSError):
             if os.path.exists(part_path):
                 os.remove(part_path)
-        except Exception:
-            pass
         raise
 
 
@@ -314,7 +313,7 @@ def copy_one(src_file_path, dest_dir, seen_hashes, hashes_f, stats, dry_run=Fals
         safe_copy(src_file_path, dest_file_path, img_hash)
     except KeyboardInterrupt:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - one bad file must not stop the whole backup
         logger.error(f"Error copying {src_file_path} to {dest_file_path}: {e}")
         stats.errors += 1
         stats.error_files.append(src_file_path)
