@@ -34,8 +34,12 @@ photocopier = "photocopier.cli:main"
 [tool.hatch.version]
 path = "photocopier/__init__.py"
 
+# Source package: just the code, tests and docs (not plans or personal scripts)
+[tool.hatch.build.targets.sdist]
+include = ["photocopier", "tests", "README.md", "LICENSE", "pyproject.toml"]
+
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.4", "build>=1.0", "twine>=5.0"]
+dev = ["pytest>=7.0", "ruff>=0.4", "build>=1.0", "twine>=7.0"]  # twine 7 accepts Metadata-Version 2.5 (current hatchling)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

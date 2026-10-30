@@ -51,7 +51,8 @@ photocopier copy ~/Pictures /Volumes/MyBackupDrive/photos
   source before the file is recorded as done.
 - Interrupted runs (unplugged drive, Ctrl-C) are safe: in-flight files are cleaned up
   and re-copied next time.
-- Add `--dry-run` to preview what would be copied without writing anything.
+- Add `--dry-run` to preview what would be copied without writing anything, and
+  `-v` to list each file as it's handled.
 
 Run it again any time — already-copied files are skipped, so incremental backups
 are fast and safe.
