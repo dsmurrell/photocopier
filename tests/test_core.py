@@ -1,16 +1,21 @@
-"""Tests for photocopier.core — pure logic, no exiftool needed.
+"""Tests for photocopier.core.
 
-EXIF lookup falls back to file mtime when pyexifinfo/exiftool are unavailable
-or the file has no EXIF, so tests use plain files with controlled mtimes.
+EXIF lookup falls back to file mtime when exiftool is unavailable or the file
+has no EXIF, so most tests use plain files with controlled mtimes. TestExifTool
+needs exiftool installed and is skipped otherwise.
 """
 
 import os
+import shutil
+import subprocess
 import time
+from datetime import datetime
 
 import pytest
 
 from photocopier.core import (
     CopyStats,
+    ExifTool,
     build_dest_hash_set,
     copy_one,
     dest_path_for,
@@ -75,6 +80,59 @@ class TestBasics:
         os.utime(p, (mtime, mtime))
         dest = dest_path_for(str(tmp_path / "out"), p, get_photo_date(p))
         assert dest == str(tmp_path / "out" / "JPG" / "2021-06" / "2021-06-15_12-30-45_IMG_1.jpg")
+
+
+needs_exiftool = pytest.mark.skipif(shutil.which("exiftool") is None, reason="exiftool not installed")
+
+
+def make_exif_file(path, date="2019:03:04 05:06:07"):
+    subprocess.run(["exiftool", "-q", "-o", path, f"-DateTimeOriginal={date}"], check=True)
+    return path
+
+
+class TestExifTool:
+    @needs_exiftool
+    def test_reads_exif_date(self, tmp_path):
+        p = make_exif_file(str(tmp_path / "a.exif"))
+        assert get_photo_date(p) == datetime(2019, 3, 4, 5, 6, 7)
+
+    @needs_exiftool
+    def test_many_files_get_their_own_dates(self, tmp_path):
+        et = ExifTool()
+        try:
+            files = [make_exif_file(str(tmp_path / f"{i}.exif"), f"2019:03:{i:02d} 00:00:00") for i in range(1, 6)]
+            plain = make_file(str(tmp_path / "plain.jpg"))
+            for _ in range(2):
+                for i, f in enumerate(files, 1):
+                    assert et.date_taken(f) == f"2019:03:{i:02d} 00:00:00"
+                    assert et.date_taken(plain) is None
+            assert et.date_taken(str(tmp_path / "missing.jpg")) is None
+            assert et.date_taken(files[0]) == "2019:03:01 00:00:00"
+        finally:
+            et.close()
+
+    @needs_exiftool
+    def test_restarts_after_exiftool_dies(self, tmp_path):
+        et = ExifTool()
+        try:
+            p = make_exif_file(str(tmp_path / "a.exif"))
+            assert et.date_taken(p) == "2019:03:04 05:06:07"
+            et.proc.kill()
+            et.proc.wait()
+            assert et.date_taken(p) == "2019:03:04 05:06:07"
+        finally:
+            et.close()
+
+    def test_missing_exiftool_falls_back(self, tmp_path):
+        et = ExifTool(command="no-such-exiftool-binary")
+        p = make_file(str(tmp_path / "a.jpg"))
+        assert et.date_taken(p) is None
+        assert et.unavailable
+
+    def test_newline_in_path_skipped(self, tmp_path):
+        et = ExifTool()
+        assert et.date_taken(str(tmp_path / "bad\nname.jpg")) is None
+        assert et.proc is None
 
 
 class TestSafeCopy:

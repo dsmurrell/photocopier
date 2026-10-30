@@ -5,10 +5,15 @@ copied_hashes.txt, and changing algorithm would make every past copy look new.
 MD5 is fine for de-duplication (we are not defending against adversaries).
 """
 
+import atexit
 import hashlib
+import json
 import logging
 import os
+import queue
 import shutil
+import subprocess
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -84,18 +89,111 @@ def hash_file(file_path):
         return None
 
 
+class ExifTool:
+    """One long-running exiftool process, reused for every file.
+
+    Starting exiftool (Perl) per file costs ~0.13s; asking a running one costs ~0.01s.
+    Each request is tagged with a number and the reply must carry the same number
+    and name the same file, so a reply can never be matched to the wrong photo.
+    On any problem the process is killed and restarted on the next request, and
+    the caller falls back to the file's modified time.
+    """
+
+    TIMEOUT = 30  # seconds to wait for one reply
+
+    def __init__(self, command="exiftool"):
+        self.command = command
+        self.proc = None
+        self.lines = None
+        self.counter = 0
+        self.unavailable = False
+
+    def _start(self):
+        self.proc = subprocess.Popen(
+            [self.command, "-stay_open", "True", "-@", "-"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            # Own session, so Ctrl-C reaches only us, not exiftool (no Perl "panic").
+            start_new_session=True,
+        )
+        self.lines = queue.Queue()
+        threading.Thread(target=self._pump, args=(self.proc.stdout, self.lines), daemon=True).start()
+
+    @staticmethod
+    def _pump(stream, lines):
+        for line in stream:
+            lines.put(line)
+        lines.put(None)  # process ended
+
+    def date_taken(self, file_path):
+        """EXIF DateTimeOriginal string for file_path, or None."""
+        if self.unavailable or "\n" in file_path or "\r" in file_path:
+            return None
+        file_path = os.path.abspath(file_path)
+        try:
+            if self.proc is None or self.proc.poll() is not None:
+                self._start()
+            self.counter += 1
+            n = self.counter
+            args = ["-G", "-j", "-EXIF:DateTimeOriginal", "-charset", "filename=utf8", file_path, f"-execute{n}"]
+            self.proc.stdin.write("\n".join(args) + "\n")
+            self.proc.stdin.flush()
+            out = []
+            while True:
+                line = self.lines.get(timeout=self.TIMEOUT)
+                if line is None:
+                    raise RuntimeError("exiftool exited")
+                if line.startswith("{ready"):
+                    if line.strip() == f"{{ready{n}}}":
+                        break
+                    out = []  # leftover reply to an older request: discard
+                    continue
+                out.append(line)
+            if not out:
+                return None  # unreadable file: exiftool printed only an error
+            data = json.loads("".join(out))
+            # exiftool echoes the path back (with "/" separators on Windows)
+            if len(data) != 1 or data[0].get("SourceFile") != file_path.replace(os.sep, "/"):
+                raise RuntimeError("exiftool reply was for a different file")
+            return data[0].get("EXIF:DateTimeOriginal")
+        except FileNotFoundError:
+            self.unavailable = True
+            logger.warning("exiftool not found: using file modified times for dates.")
+        except Exception as e:
+            logger.warning(f"exiftool problem on {file_path} ({e!r}); restarting it.")
+            self.close()
+        return None
+
+    def close(self):
+        if self.proc is None:
+            return
+        proc, self.proc = self.proc, None
+        try:
+            proc.stdin.write("-stay_open\nFalse\n")
+            proc.stdin.flush()
+            proc.stdin.close()
+            proc.wait(timeout=5)
+        except Exception:
+            proc.kill()
+            proc.wait()
+
+
+_exiftool = ExifTool()
+atexit.register(_exiftool.close)
+
+
 def get_photo_date(file_path):
     """Date taken from EXIF (via exiftool), falling back to file mtime."""
-    try:
-        import pyexifinfo as p
-
-        data = p.get_json(file_path)
-        for d in data:
-            if "EXIF:DateTimeOriginal" in d:
-                date_str = d["EXIF:DateTimeOriginal"]
-                return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
-    except Exception as e:
-        logger.debug(f"No usable EXIF date for {file_path}: {e}")
+    date_str = _exiftool.date_taken(file_path)
+    if isinstance(date_str, str):
+        try:
+            return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+        except ValueError:
+            logger.debug(f"Unusable EXIF date {date_str!r} for {file_path}")
 
     mod_timestamp = os.path.getmtime(file_path)
     return datetime.fromtimestamp(mod_timestamp)
